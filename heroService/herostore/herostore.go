@@ -166,7 +166,7 @@ func (hs *HeroStore) DeleteHero(id int) error {
 	return nil
 }
 
-func (hs *HeroStore) GetWinner(id int, id2 int, hasLostMap ...*map[Hero]bool) (Hero, error) {
+func (hs *HeroStore) GetWinner(id int, id2 int) (Hero, error) {
 	hs.Lock()
 	defer hs.Unlock()
 
@@ -202,50 +202,60 @@ func (hs *HeroStore) GetWinner(id int, id2 int, hasLostMap ...*map[Hero]bool) (H
 	return winner, nil
 }
 
-// TODO: consider - new function to calculate winner from 2 heros or just get and pass ids to existing one
+
 func (hs *HeroStore) GetGlobalWinner() (Hero, error) {
 	heroes, err := hs.GetAllHeroes()
 	if err != nil {
-		log.Fatal(err)
+		return Hero{}, err
 	}
 
-	var hasLostMap = make(map[Hero]bool)
+	var lostMap = make(map[int]bool)
+	var wg sync.WaitGroup
 
-	fmt.Println(heroes)
+	for i := 0; i < len(heroes); i++ {
+		for j := i + 1; j < len(heroes); j++ {
+			if _, lost := lostMap[heroes[i].Id]; lost {
+				continue
+			}
+			if _, lost := lostMap[heroes[j].Id]; lost {
+				continue
+			}
+			wg.Add(1)
+			go CompareHeroes(heroes[i], heroes[j], &wg, lostMap)
+		}
+	}
+
+	wg.Wait()
 
 	for _, hero := range heroes {
-		hasLostMap[hero] = true
-		fmt.Println(hero)
+		if _, lost := lostMap[hero.Id]; !lost {
+			return hero, nil
+		}
 	}
 
-	fmt.Println(hasLostMap)
-
-	return Hero{}, nil
+	return Hero{}, fmt.Errorf("no single best hero found")
 }
 
-// Getting all heroes ids
-// May not be neccessary as ill just pass map of heroes
+func CompareHeroes(hero1, hero2 Hero, wg *sync.WaitGroup, lostMap map[int]bool) {
+	defer wg.Done()
+	winner := CalculateWinner(hero1, hero2)
+	if winner.Id != 0 {
+		if winner.Id == hero1.Id {
+			lostMap[hero2.Id] = true
+		} else if winner.Id == hero2.Id {
+			lostMap[hero1.Id] = true
+		}
+	}
+}
 
-// heroIDs := []int{}
+func CalculateWinner(hero1, hero2 Hero) Hero {
+	resultHero1 := float64(hero1.Health) / float64(hero2.Damage)
+	resultHero2 := float64(hero2.Health) / float64(hero1.Damage)
 
-// 	query := `SELECT id FROM heroes`
-// 	rows, err := hs.heroes.Query(query)
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	for rows.Next() {
-// 		var heroId int
-// 		err := rows.Scan(&heroId)
-// 		if err != nil {
-// 			return Hero{}, err
-// 		}
-// 		heroIDs = append(heroIDs, heroId)
-// 	}
-
-// 	fmt.Println(heroIDs, heroes)
-
-// 	for i := 0; i < len(heroIDs); i++ {
-// 		fmt.Println(heroIDs[i])
-// 	}
+	if resultHero1 > resultHero2 {
+		return hero1
+	} else if resultHero1 < resultHero2 {
+		return hero2
+	}
+	return Hero{}
+}
