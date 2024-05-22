@@ -1,0 +1,2 @@
+Good practices - https://grafana.com/blog/2024/02/09/how-i-write-http-services-in-go-after-13-years/
+Graceful shutdown - https://medium.com/@dsilverdi/graceful-shutdown-in-go-a-polite-way-to-end-programs-6af16e025549
