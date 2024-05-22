@@ -1,73 +1,10 @@
-package herostore
+package hero
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"sync"
-
-	_ "github.com/mattn/go-sqlite3"
 )
-
-type HeroStore struct {
-	sync.Mutex
-	heroes *sql.DB
-}
-
-func initDB(filepath string) *sql.DB {
-	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		if _, err := os.Create(filepath); err != nil {
-			return nil
-		}
-	}
-
-	db, err := sql.Open("sqlite3", filepath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	createTableSQL := `CREATE TABLE IF NOT EXISTS heroes (
-        "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-        "name" TEXT,
-        "damage" INTEGER,
-        "health" INTEGER,
-        "gender" BOOLEAN,
-        "class" INTEGER
-    );`
-
-	statement, err := db.Prepare(createTableSQL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	statement.Exec()
-	log.Println("Heroes table created successfully")
-	return db
-}
-
-type Hero struct {
-	Id     int    `json:"id"`
-	Name   string `json:"name"`
-	Damage int    `json:"damage"`
-	Health int    `json:"health"`
-	Gender bool   `json:"gender"`
-	Class  Class  `json:"class"`
-}
-
-type Class int64
-
-const (
-	Warrior Class = 0
-	Hunter  Class = 1
-	Mage    Class = 2
-	Priest  Class = 3
-)
-
-func New() *HeroStore {
-	hs := &HeroStore{}
-	hs.heroes = initDB("./heroes-db.db")
-	return hs
-}
 
 func (hs *HeroStore) CreateHero(newHero ReqHero) error {
 	hs.Lock()
@@ -197,11 +134,10 @@ func (hs *HeroStore) GetWinner(id int, id2 int) (Hero, error) {
 	} else {
 		winner = hero2
 	}
-	fmt.Println(resultHero1, resultHero2)
+	log.Printf("Fight %s vs %s - Winner: %s", hero1.Name, hero2.Name, winner.Name)
 
 	return winner, nil
 }
-
 
 func (hs *HeroStore) GetGlobalWinner() (Hero, error) {
 	heroes, err := hs.GetAllHeroes()
@@ -211,6 +147,7 @@ func (hs *HeroStore) GetGlobalWinner() (Hero, error) {
 
 	var lostMap = make(map[int]bool)
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	for i := 0; i < len(heroes); i++ {
 		for j := i + 1; j < len(heroes); j++ {
@@ -221,7 +158,7 @@ func (hs *HeroStore) GetGlobalWinner() (Hero, error) {
 				continue
 			}
 			wg.Add(1)
-			go CompareHeroes(heroes[i], heroes[j], &wg, lostMap)
+			go CompareHeroes(heroes[i], heroes[j], &wg, &mu, lostMap)
 		}
 	}
 
@@ -236,14 +173,18 @@ func (hs *HeroStore) GetGlobalWinner() (Hero, error) {
 	return Hero{}, fmt.Errorf("no single best hero found")
 }
 
-func CompareHeroes(hero1, hero2 Hero, wg *sync.WaitGroup, lostMap map[int]bool) {
+func CompareHeroes(hero1, hero2 Hero, wg *sync.WaitGroup, mu *sync.Mutex, lostMap map[int]bool) {
 	defer wg.Done()
 	winner := CalculateWinner(hero1, hero2)
 	if winner.Id != 0 {
 		if winner.Id == hero1.Id {
+			mu.Lock()
 			lostMap[hero2.Id] = true
+			mu.Unlock()
 		} else if winner.Id == hero2.Id {
+			mu.Lock()
 			lostMap[hero1.Id] = true
+			mu.Unlock()
 		}
 	}
 }

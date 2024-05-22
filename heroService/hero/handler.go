@@ -1,4 +1,4 @@
-package herostore
+package hero
 
 import (
 	"encoding/json"
@@ -6,23 +6,6 @@ import (
 	"net/http"
 	"strconv"
 )
-
-type heroSever struct {
-	server *HeroStore
-}
-
-func NewHeroServer() *heroSever {
-	store := New()
-	return &heroSever{server: store}
-}
-
-type ReqHero struct {
-	Name   string `json:"name"`
-	Damage int    `json:"damage"`
-	Health int    `json:"health"`
-	Gender bool   `json:"gender"`
-	Class  Class  `json:"class"`
-}
 
 func (hs *heroSever) CreateHeroHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handling hero create at %s\n", req.URL.Path)

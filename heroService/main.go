@@ -1,21 +1,22 @@
 package main
 
 import (
-	"hero/herostore"
+	"hero/api"
+	"hero/middleware"
 	"net/http"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	server := herostore.NewHeroServer()
+	mux := api.NewApp()
 
-	mux.HandleFunc("POST /hero/add", server.CreateHeroHandler)
-	mux.HandleFunc("PATCH /hero/update/{id}", server.UpdateHeroHandler)
-	mux.HandleFunc("GET /hero/getAll", server.GetHeroesHandler)
-	mux.HandleFunc("GET /hero/get/{id}", server.GetHeroByIdHandler)
-	mux.HandleFunc("GET /hero/winner/{id}/{id2}", server.GetWinnerHandler)
-	mux.HandleFunc("GET /hero/winner/all", server.GetGloblaWinnerHandler)
-	mux.HandleFunc("DELETE /hero/delete/{id}", server.DeleteHeroHandler)
+	stack := middleware.CreateStack(
+		middleware.Logging,
+	)
 
-	http.ListenAndServe("localhost:8080", mux)
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: stack(mux),
+	}
+
+	server.ListenAndServe()
 }
