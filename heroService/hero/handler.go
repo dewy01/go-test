@@ -1,7 +1,7 @@
 package hero
 
 import (
-	"encoding/json"
+	"hero/util"
 	"log"
 	"net/http"
 	"strconv"
@@ -9,15 +9,16 @@ import (
 
 func (hs *heroSever) CreateHeroHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handling hero create at %s\n", req.URL.Path)
-	var reqHero ReqHero
 
-	err := json.NewDecoder(req.Body).Decode(&reqHero)
+	hero, err := util.Decode[ReqHero](req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	hs.server.CreateHero(reqHero)
-	json.NewEncoder(w).Encode(http.StatusOK)
+
+	hs.server.CreateHero(hero)
+
+	util.Encode(w, req, http.StatusOK, hero)
 
 }
 
@@ -27,20 +28,20 @@ func (hs *heroSever) UpdateHeroHandler(w http.ResponseWriter, req *http.Request)
 		http.Error(w, "Invalid hero id", http.StatusBadRequest)
 		return
 	}
-	var reqHero ReqHero
-	err2 := json.NewDecoder(req.Body).Decode(&reqHero)
-	if err2 != nil {
-		http.Error(w, err2.Error(), http.StatusBadRequest)
+
+	hero, err := util.Decode[ReqHero](req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	updateErr := hs.server.UpdateHero(id, reqHero)
-	if updateErr != nil {
-		http.Error(w, updateErr.Error(), http.StatusBadRequest)
+	if err := hs.server.UpdateHero(id, hero); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(http.StatusOK)
+	util.Encode(w, req, http.StatusOK, hero)
 }
 
 func (hs *heroSever) GetHeroesHandler(w http.ResponseWriter, req *http.Request) {
@@ -50,7 +51,7 @@ func (hs *heroSever) GetHeroesHandler(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(heroes)
+	util.Encode(w, req, http.StatusOK, heroes)
 }
 
 func (hs *heroSever) GetHeroByIdHandler(w http.ResponseWriter, req *http.Request) {
@@ -66,7 +67,7 @@ func (hs *heroSever) GetHeroByIdHandler(w http.ResponseWriter, req *http.Request
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(hero)
+	util.Encode(w, req, http.StatusOK, hero)
 }
 
 func (hs *heroSever) DeleteHeroHandler(w http.ResponseWriter, req *http.Request) {
@@ -82,7 +83,7 @@ func (hs *heroSever) DeleteHeroHandler(w http.ResponseWriter, req *http.Request)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(http.StatusOK)
+	util.Encode(w, req, http.StatusOK, id)
 }
 
 func (hs *heroSever) GetWinnerHandler(w http.ResponseWriter, req *http.Request) {
@@ -104,7 +105,7 @@ func (hs *heroSever) GetWinnerHandler(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(winner)
+	util.Encode(w, req, http.StatusOK, winner)
 }
 
 func (hs *heroSever) GetGloblaWinnerHandler(w http.ResponseWriter, req *http.Request) {
@@ -115,5 +116,5 @@ func (hs *heroSever) GetGloblaWinnerHandler(w http.ResponseWriter, req *http.Req
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(winner)
+	util.Encode(w, req, http.StatusOK, winner)
 }

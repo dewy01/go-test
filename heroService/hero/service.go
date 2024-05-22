@@ -110,17 +110,15 @@ func (hs *HeroStore) GetWinner(id int, id2 int) (Hero, error) {
 	hero1 := Hero{}
 	query := `SELECT id, name, damage, health, gender, class FROM heroes WHERE id = ?`
 	row := hs.heroes.QueryRow(query, id)
-	err := row.Scan(&hero1.Id, &hero1.Name, &hero1.Damage, &hero1.Health, &hero1.Gender, &hero1.Class)
-	if err != nil {
+	if err := row.Scan(&hero1.Id, &hero1.Name, &hero1.Damage, &hero1.Health, &hero1.Gender, &hero1.Class); err != nil {
 		return Hero{}, err
 	}
 
 	hero2 := Hero{}
 	query2 := `SELECT id, name, damage, health, gender, class FROM heroes WHERE id = ?`
 	row2 := hs.heroes.QueryRow(query2, id2)
-	err2 := row2.Scan(&hero2.Id, &hero2.Name, &hero2.Damage, &hero2.Health, &hero2.Gender, &hero2.Class)
-	if err2 != nil {
-		return Hero{}, err2
+	if err := row2.Scan(&hero2.Id, &hero2.Name, &hero2.Damage, &hero2.Health, &hero2.Gender, &hero2.Class); err != nil {
+		return Hero{}, err
 	}
 
 	var winner Hero
