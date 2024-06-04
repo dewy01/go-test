@@ -17,6 +17,7 @@ func StartHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
 	s := NewServer()
 
 	mux.Handle("/ws", websocket.Handler(s.HandleWS))
+	mux.Handle("/feed", websocket.Handler(s.HandleWsFeed))
 
 	server := http.Server{
 		Addr:    ":8080",

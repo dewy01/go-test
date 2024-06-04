@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -22,6 +23,16 @@ func (s *Server) HandleWS(ws *websocket.Conn) {
 
 	s.conns[ws] = true
 	s.readLoop(ws)
+}
+
+func (s *Server) HandleWsFeed(ws *websocket.Conn) {
+	for {
+		payload := fmt.Sprintf("Order -> %d", time.Now().UnixNano())
+		if _, err := ws.Write([]byte(payload)); err != nil {
+			fmt.Printf("Write message error: %s", err)
+		}
+		time.Sleep(time.Second * 2)
+	}
 }
 
 func (s *Server) broadcastMsg(b []byte) {
